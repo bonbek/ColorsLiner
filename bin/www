@@ -1,0 +1,247 @@
+#!/usr/bin/env node
+
+/**
+ * Module dependencies.
+ */
+
+var app = require('../app');
+var debug = require('debug')('ColorsLiner:server');
+var http = require('http');
+
+/**
+ * Get port from environment and store in Express.
+ */
+
+var port = normalizePort(process.env.PORT || '3000');
+app.set('port', port);
+
+/**
+ * Create HTTP server.
+ */
+
+var server = http.createServer(app);
+
+/**
+ * Create socket.io server.
+ */
+
+var io = require('socket.io')(server);
+
+/**
+ * Listen on provided port, on all network interfaces.
+ */
+
+server.listen(port);
+server.on('error', onError);
+server.on('listening', onListening);
+
+/**
+ * Normalize a port into a number, string, or false.
+ */
+
+function normalizePort(val) {
+    var port = parseInt(val, 10);
+
+    if (isNaN(port)) {
+        // named pipe
+        return val;
+    }
+
+    if (port >= 0) {
+        // port number
+        return port;
+    }
+
+    return false;
+}
+
+/**
+ * Event listener for HTTP server "error" event.
+ */
+
+function onError(error) {
+    if (error.syscall !== 'listen') {
+        throw error;
+    }
+
+    var bind = typeof port === 'string'
+        ? 'Pipe ' + port
+        : 'Port ' + port;
+
+    // handle specific listen errors with friendly messages
+    switch (error.code) {
+        case 'EACCES':
+            console.error(bind + ' requires elevated privileges');
+            process.exit(1);
+            break;
+        case 'EADDRINUSE':
+            console.error(bind + ' is already in use');
+            process.exit(1);
+            break;
+        default:
+            throw error;
+    }
+}
+
+/**
+ * Event listener for HTTP server "listening" event.
+ */
+
+function onListening() {
+    var addr = server.address();
+    var bind = typeof addr === 'string'
+        ? 'pipe ' + addr
+        : 'port ' + addr.port;
+    debug('Listening on ' + bind);
+}
+
+/**
+ * Game logic.
+ */
+
+var map = [];
+for (i = 0; i < 50; i++) {
+    map[i] = [];
+    for (j = 0; j < 50; j++) {
+        map[i][j] = {
+            color: "#ffffff",
+            type: "blank"
+        };
+    }
+}
+
+var colors = ['blue', 'red', 'green'];
+
+function intersectRect(r1, r2) {
+    return !(r2.left > r1.right ||
+    r2.right < r1.left ||
+    r2.top > r1.bottom ||
+    r2.bottom < r1.top);
+}
+
+function colorByPos(square) {
+    for (i = 0; i < map.length; i++) {
+        for (j = 0; j < map.length; j++) {
+            var r1 = {
+                top: square.position.y-50,
+                bottom: square.position.y+50,
+                left: square.position.x-50,
+                right: square.position.x+50
+            };
+            var r2 = {
+                top: j*101,
+                bottom: j*101+101,
+                left: i*101,
+                right: i*101+101
+            };
+            if(intersectRect(r1, r2) == true) {
+                map[j][i].color = square.color;
+                map[j][i].type = "colored";
+            }
+        }
+    }
+    io.emit('map', map);
+}
+
+/**
+ * Listening socket.io server.
+ */
+
+var squares = {};
+var sockets = [];
+
+io.on('connection', function(socket){
+    onSocketConnection(socket);
+    socket.on('disconnect', function() {
+        onSocketDisconnect(socket.id);
+    });
+    socket.on('move', function(data) {
+        onSquareMove(socket.id, data);
+    });
+});
+
+function onSocketConnection(socket) {
+    squares[socket.id] = {
+        id: socket.id,
+        color: colors[Math.floor(Math.random()*colors.length)],
+        position: {x: 50, y: 50}
+    };
+    sockets[socket.id] = socket;
+    console.log('A user connected ! Sending informations...');
+    socket.emit('data', {color: squares[socket.id].color, map: map, squares: squares});
+}
+
+function onSocketDisconnect(id) {
+    delete squares[id];
+    console.log('A user disconnected !');
+}
+
+function onSquareMove(id, data) {
+    /*
+     if(data.direction != null) {
+     switch (data.direction) {
+     case "top":
+     if(squares[id].position.y != 1) {
+     map[squares[id].position.y - 1][squares[id].position.x - 1].color = squares[id].color;
+     map[squares[id].position.y - 1][squares[id].position.x - 1].type = "colored";
+     squares[id].position.y--;
+     map[squares[id].position.y - 1][squares[id].position.x - 1].color = squares[id].color;
+     map[squares[id].position.y - 1][squares[id].position.x - 1].type = "square";
+     }
+     break;
+     case "down":
+     if(squares[id].position.y != map.length) {
+     map[squares[id].position.y - 1][squares[id].position.x - 1].color = squares[id].color;
+     map[squares[id].position.y - 1][squares[id].position.x - 1].type = "colored";
+     squares[id].position.y++;
+     map[squares[id].position.y - 1][squares[id].position.x - 1].color = squares[id].color;
+     map[squares[id].position.y - 1][squares[id].position.x - 1].type = "square";
+     }
+     break;
+     case "left":
+     if(squares[id].position.x != 1) {
+     map[squares[id].position.y - 1][squares[id].position.x - 1].color = squares[id].color;
+     map[squares[id].position.y - 1][squares[id].position.x - 1].type = "colored";
+     squares[id].position.x--;
+     map[squares[id].position.y - 1][squares[id].position.x - 1].color = squares[id].color;
+     map[squares[id].position.y - 1][squares[id].position.x - 1].type = "square";
+     }
+     break;
+     case "right":
+     if(squares[id].position.x != map.length) {
+     map[squares[id].position.y - 1][squares[id].position.x - 1].color = squares[id].color;
+     map[squares[id].position.y - 1][squares[id].position.x - 1].type = "colored";
+     squares[id].position.x++;
+     map[squares[id].position.y - 1][squares[id].position.x - 1].color = squares[id].color;
+     map[squares[id].position.y - 1][squares[id].position.x - 1].type = "square";
+     }
+     break;
+     }
+     squares[id].socket.emit('map', map);
+     }
+     */
+    switch (data.direction) {
+        case "top":
+            if(squares[id].position.y != 1) {
+                squares[id].position.y--;
+            }
+            break;
+        case "down":
+            /*if(squares[id].position.y != map.length) {*/
+            squares[id].position.y++;
+            //}
+            break;
+        case "left":
+            if(squares[id].position.x != 1) {
+                squares[id].position.x--;
+            }
+            break;
+        case "right":
+            /*if(squares[id].position.x != map.length) {*/
+            squares[id].position.x++;
+            //}
+            break;
+    }
+    io.emit('squares', squares);
+    colorByPos(squares[id]);
+}

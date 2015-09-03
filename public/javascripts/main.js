@@ -63,13 +63,15 @@ function render() {
             }
         }
         for (var asquare in squares) {
-            ctx.beginPath();
-            ctx.rect(squares[asquare].position.x-20, squares[asquare].position.y -20, 41, 41);
-            ctx.fillStyle = squares[asquare].color;
-            ctx.fill();
-            ctx.lineWidth = 0;
-            ctx.strokeStyle = "black";
-            ctx.stroke();
+            if(squares.hasOwnProperty(asquare)) {
+                ctx.beginPath();
+                ctx.rect(squares[asquare].position.x - 20, squares[asquare].position.y - 20, 41, 41);
+                ctx.fillStyle = squares[asquare].color;
+                ctx.fill();
+                ctx.lineWidth = 0;
+                ctx.strokeStyle = "black";
+                ctx.stroke();
+            }
         }
         ctx.translate(squares[id].position.x, squares[id].position.y);
     }

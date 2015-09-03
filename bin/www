@@ -123,10 +123,10 @@ function colorByPos(square) {
     for (i = 0; i < map.length; i++) {
         for (j = 0; j < map.length; j++) {
             var r1 = {
-                top: square.position.y-50,
-                bottom: square.position.y+50,
-                left: square.position.x-50,
-                right: square.position.x+50
+                top: square.position.y-20,
+                bottom: square.position.y+20,
+                left: square.position.x-20,
+                right: square.position.x+20
             };
             var r2 = {
                 top: j*101,
@@ -164,11 +164,11 @@ function onSocketConnection(socket) {
     squares[socket.id] = {
         id: socket.id,
         color: colors[Math.floor(Math.random()*colors.length)],
-        position: {x: 50, y: 50}
+        position: {x: 20, y: 20}
     };
     sockets[socket.id] = socket;
     console.log('A user connected ! Sending informations...');
-    socket.emit('data', {color: squares[socket.id].color, map: map, squares: squares});
+    socket.emit('data', {color: squares[socket.id].color, id: socket.id, map: map, squares: squares});
 }
 
 function onSocketDisconnect(id) {

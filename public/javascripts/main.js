@@ -3,14 +3,16 @@ var socket = io(),
     ctx = canvas.getContext('2d'),
     map = [],
     squares = [],
-    square = {direction: null, velocity: 1, lastmove: 1},
+    square = {direction: null, velocity: 2, lastmove: 1},
     color = "",
-    loaded = false;
+    loaded = false,
+    id = "";
 
 socket.on('data', function(data) {
     color = data.color;
     map = data.map;
     squares = data.squares;
+    id = data.id;
     loaded = true;
 });
 
@@ -46,6 +48,7 @@ function render() {
                 }
             }
         }
+        /*
         if (square.lastmove == square.velocity) {
             square.lastmove = 1;
             if (square.direction != null) {
@@ -53,16 +56,22 @@ function render() {
             }
         } else {
             square.lastmove++;
+        }*/
+        if (square.direction != null) {
+            for(i = 1; i < square.velocity; i++) {
+                socket.emit('move', {direction: square.direction});
+            }
         }
         for (var asquare in squares) {
             ctx.beginPath();
-            ctx.rect(squares[asquare].position.x -50, squares[asquare].position.y -50, 101, 101);
+            ctx.rect(squares[asquare].position.x-20, squares[asquare].position.y -20, 41, 41);
             ctx.fillStyle = squares[asquare].color;
             ctx.fill();
             ctx.lineWidth = 0;
             ctx.strokeStyle = "black";
             ctx.stroke();
         }
+        ctx.translate(squares[id].position.x, squares[id].position.y);
     }
     requestAnimationFrame(render);
 }

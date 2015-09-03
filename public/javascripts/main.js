@@ -27,8 +27,8 @@ socket.on('squares', function(data) {
 function render() {
     if(loaded) {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
-        for (i = 0; i < map.length; i++) {
-            for (j = 0; j < map.length; j++) {
+        for (var i = 0; i < map.length; i++) {
+            for (var j = 0; j < map.length; j++) {
                 if (map[i][j].type == "square") {
                     ctx.beginPath();
                     ctx.rect(j * 101, i * 101, 101, 101);

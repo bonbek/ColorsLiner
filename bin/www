@@ -100,9 +100,9 @@ function onListening() {
  */
 
 var map = [];
-for (i = 0; i < 50; i++) {
+for (var i = 0; i < 50; i++) {
     map[i] = [];
-    for (j = 0; j < 50; j++) {
+    for (var j = 0; j < 50; j++) {
         map[i][j] = {
             color: "#ffffff",
             type: "blank"
@@ -120,8 +120,8 @@ function intersectRect(r1, r2) {
 }
 
 function colorByPos(square) {
-    for (i = 0; i < map.length; i++) {
-        for (j = 0; j < map.length; j++) {
+    for (var i = 0; i < map.length; i++) {
+        for (var j = 0; j < map.length; j++) {
             var r1 = {
                 top: square.position.y-20,
                 bottom: square.position.y+20,

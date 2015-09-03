@@ -104,7 +104,7 @@ for (var i = 0; i < 50; i++) {
     map[i] = [];
     for (var j = 0; j < 50; j++) {
         map[i][j] = {
-            color: "#ffffff",
+            color: "#000000",
             type: "blank"
         };
     }
@@ -155,8 +155,8 @@ io.on('connection', function(socket){
     socket.on('disconnect', function() {
         onSocketDisconnect(socket.id);
     });
-    socket.on('move', function(data) {
-        onSquareMove(socket.id, data);
+    socket.on('direction', function(data) {
+        onSquareDirection(socket.id, data);
     });
 });
 
@@ -164,11 +164,12 @@ function onSocketConnection(socket) {
     squares[socket.id] = {
         id: socket.id,
         color: colors[Math.floor(Math.random()*colors.length)],
-        position: {x: 20, y: 20}
+        position: {x: 500, y: 500},
+        direction: null
     };
     sockets[socket.id] = socket;
     console.log('A user connected ! Sending informations...');
-    socket.emit('data', {color: squares[socket.id].color, id: socket.id, map: map, squares: squares});
+    socket.emit('data', {color: squares[socket.id].color, id: socket.id, map: map, squares: squares, direction: null});
 }
 
 function onSocketDisconnect(id) {
@@ -176,72 +177,44 @@ function onSocketDisconnect(id) {
     console.log('A user disconnected !');
 }
 
-function onSquareMove(id, data) {
-    /*
-     if(data.direction != null) {
-     switch (data.direction) {
-     case "top":
-     if(squares[id].position.y != 1) {
-     map[squares[id].position.y - 1][squares[id].position.x - 1].color = squares[id].color;
-     map[squares[id].position.y - 1][squares[id].position.x - 1].type = "colored";
-     squares[id].position.y--;
-     map[squares[id].position.y - 1][squares[id].position.x - 1].color = squares[id].color;
-     map[squares[id].position.y - 1][squares[id].position.x - 1].type = "square";
-     }
-     break;
-     case "down":
-     if(squares[id].position.y != map.length) {
-     map[squares[id].position.y - 1][squares[id].position.x - 1].color = squares[id].color;
-     map[squares[id].position.y - 1][squares[id].position.x - 1].type = "colored";
-     squares[id].position.y++;
-     map[squares[id].position.y - 1][squares[id].position.x - 1].color = squares[id].color;
-     map[squares[id].position.y - 1][squares[id].position.x - 1].type = "square";
-     }
-     break;
-     case "left":
-     if(squares[id].position.x != 1) {
-     map[squares[id].position.y - 1][squares[id].position.x - 1].color = squares[id].color;
-     map[squares[id].position.y - 1][squares[id].position.x - 1].type = "colored";
-     squares[id].position.x--;
-     map[squares[id].position.y - 1][squares[id].position.x - 1].color = squares[id].color;
-     map[squares[id].position.y - 1][squares[id].position.x - 1].type = "square";
-     }
-     break;
-     case "right":
-     if(squares[id].position.x != map.length) {
-     map[squares[id].position.y - 1][squares[id].position.x - 1].color = squares[id].color;
-     map[squares[id].position.y - 1][squares[id].position.x - 1].type = "colored";
-     squares[id].position.x++;
-     map[squares[id].position.y - 1][squares[id].position.x - 1].color = squares[id].color;
-     map[squares[id].position.y - 1][squares[id].position.x - 1].type = "square";
-     }
-     break;
-     }
-     squares[id].socket.emit('map', map);
-     }
-     */
-    switch (data.direction) {
-        case "top":
-            if(squares[id].position.y != 1) {
-                squares[id].position.y--;
+function moveSquares() {
+    for(var id in squares) {
+        if(squares.hasOwnProperty(id)) {
+            square = squares[id];
+            if (square.direction != null) {
+                switch (square.direction) {
+                    case "top":
+                        if (squares[id].position.y != 1) {
+                            squares[id].position.y--;
+                        }
+                        break;
+                    case "down":
+                        /*if(squares[id].position.y != map.length) {*/
+                        squares[id].position.y++;
+                        //}
+                        break;
+                    case "left":
+                        if (squares[id].position.x != 1) {
+                            squares[id].position.x--;
+                        }
+                        break;
+                    case "right":
+                        /*if(squares[id].position.x != map.length) {*/
+                        squares[id].position.x++;
+                        //}
+                        break;
+                }
+                io.emit('squares', squares);
+                colorByPos(squares[id]);
             }
-            break;
-        case "down":
-            /*if(squares[id].position.y != map.length) {*/
-            squares[id].position.y++;
-            //}
-            break;
-        case "left":
-            if(squares[id].position.x != 1) {
-                squares[id].position.x--;
-            }
-            break;
-        case "right":
-            /*if(squares[id].position.x != map.length) {*/
-            squares[id].position.x++;
-            //}
-            break;
+        }
     }
-    io.emit('squares', squares);
-    colorByPos(squares[id]);
 }
+
+function onSquareDirection(id, data) {
+    console.log(id + ' just changed of direction to '+data.direction+'.');
+    squares[id].direction = data.direction;
+    io.emit('squares', squares);
+}
+
+setInterval(moveSquares, 1000 / 60);

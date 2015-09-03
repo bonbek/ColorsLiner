@@ -3,10 +3,22 @@ var socket = io(),
     ctx = canvas.getContext('2d'),
     map = [],
     squares = [],
-    square = {direction: null, velocity: 2, lastmove: 1},
+    square = {direction: null, velocity: 1, lastmove: 1},
     color = "",
     loaded = false,
-    id = "";
+    id = "",
+    animLoopHandle,
+    fps,
+    lastCalledTime;
+
+var camera = {
+    x: 0,
+    y: 0,
+    screen: {
+        x: window.innerWidth,
+        y: window.innerHeight
+    }
+};
 
 socket.on('data', function(data) {
     color = data.color;
@@ -14,6 +26,9 @@ socket.on('data', function(data) {
     squares = data.squares;
     id = data.id;
     loaded = true;
+    if (!animLoopHandle) {
+        animloop();
+    }
 });
 
 socket.on('map', function(data) {
@@ -21,61 +36,18 @@ socket.on('map', function(data) {
 });
 
 socket.on('squares', function(data) {
+    camera.x = data[id].position.x - (camera.screen.x / 2);
+    camera.y = data[id].position.y - (camera.screen.y / 2);
+    console.log(camera);
     squares = data;
 });
 
 function render() {
-    if(loaded) {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        for (var i = 0; i < map.length; i++) {
-            for (var j = 0; j < map.length; j++) {
-                if (map[i][j].type == "square") {
-                    ctx.beginPath();
-                    ctx.rect(j * 101, i * 101, 101, 101);
-                    ctx.fillStyle = map[i][j].color;
-                    ctx.fill();
-                    ctx.lineWidth = 1;
-                    ctx.strokeStyle = "black";
-                    ctx.stroke();
-                } else {
-                    ctx.beginPath();
-                    ctx.rect(j * 101, i * 101, 101, 101);
-                    ctx.fillStyle = map[i][j].color;
-                    ctx.fill();
-                    ctx.lineWidth = 1;
-                    ctx.strokeStyle = "black";
-                    ctx.stroke();
-                }
-            }
-        }
-        /*
-        if (square.lastmove == square.velocity) {
-            square.lastmove = 1;
-            if (square.direction != null) {
-                socket.emit('move', {direction: square.direction});
-            }
-        } else {
-            square.lastmove++;
-        }*/
-        if (square.direction != null) {
-            for(i = 1; i < square.velocity; i++) {
-                socket.emit('move', {direction: square.direction});
-            }
-        }
-        for (var asquare in squares) {
-            if(squares.hasOwnProperty(asquare)) {
-                ctx.beginPath();
-                ctx.rect(squares[asquare].position.x - 20, squares[asquare].position.y - 20, 41, 41);
-                ctx.fillStyle = squares[asquare].color;
-                ctx.fill();
-                ctx.lineWidth = 0;
-                ctx.strokeStyle = "black";
-                ctx.stroke();
-            }
-        }
-        ctx.translate(squares[id].position.x, squares[id].position.y);
+    if (loaded) {
+        //ctx.translate(camera.x, camera.y);
+
+        requestAnimationFrame(render);
     }
-    requestAnimationFrame(render);
 }
 function doKeyDown(evt){
     switch (evt.keyCode) {
@@ -92,6 +64,7 @@ function doKeyDown(evt){
             square.direction = "right";
             break;
     }
+    socket.emit('direction', {direction: square.direction});
 }
 
 window.addEventListener('resize', resizeCanvas, false);
@@ -100,8 +73,62 @@ window.addEventListener('keydown', doKeyDown, true);
 function resizeCanvas() {
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
+    camera.screen = {
+        x: window.innerWidth,
+        y: window.innerHeight
+    };
 }
 
 render();
 resizeCanvas();
-//var interval = setInterval(function() {if(square.direction != null) {socket.emit('move', {direction: square.direction})}}, 250);
+
+
+function animloop() {
+    animLoopHandle = window.requestAnimFrame(animloop);
+    gameLoop();
+}
+
+function gameLoop() {
+    if(!lastCalledTime) {
+        lastCalledTime = Date.now();
+        fps = 0;
+        return;
+    }
+    var delta = (new Date().getTime() - lastCalledTime)/1000;
+    lastCalledTime = Date.now();
+    fps = 1/delta;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.fillText(fps, 10, 20);
+    for (var i = 0; i < map.length; i++) {
+        for (var j = 0; j < map.length; j++) {
+            if (map[i][j].type == "square") {
+                ctx.beginPath();
+                ctx.rect(j * 101 - camera.x, i * 101 - camera.y, 101, 101);
+                ctx.fillStyle = map[i][j].color;
+                ctx.fill();
+                ctx.lineWidth = 1;
+                ctx.strokeStyle = "black";
+                ctx.stroke();
+            } else {
+                ctx.beginPath();
+                ctx.rect(j * 101 - camera.x, i * 101 - camera.y, 101, 101);
+                ctx.fillStyle = map[i][j].color;
+                ctx.fill();
+                ctx.lineWidth = 1;
+                ctx.strokeStyle = "black";
+                ctx.stroke();
+            }
+        }
+    }
+    for (var asquare in squares) {
+        if(squares.hasOwnProperty(asquare)) {
+            ctx.beginPath();
+            ctx.rect(squares[asquare].position.x - 20 - camera.x, squares[asquare].position.y - 20 - camera.y, 41, 41);
+            ctx.fillStyle = squares[asquare].color;
+            ctx.fill();
+            ctx.lineWidth = 0;
+            ctx.strokeStyle = "black";
+            ctx.stroke();
+        }
+    }
+}
